@@ -10,8 +10,7 @@ data "template_file" "lb_user_data" {
   vars = {
     haproxy_cfg = templatefile("${path.module}/templates/lb/haproxy.cfg", {
       master_nodes    = { for i in local.master_nodes : i.name => i.ip },
-      worker_nodes    = { for i in local.worker_nodes : i.name => i.ip },
-      bootstrap_nodes = { for i in local.bootstrap_nodes : i.name => i.ip }
+      worker_nodes    = { for i in local.worker_nodes : i.name => i.ip }
     })
   }
 }
@@ -46,7 +45,7 @@ resource "libvirt_domain" "lb" {
   autostart  = false
   qemu_agent = true
 
-  cpu = {
+  cpu {
     mode = "host-passthrough"
   }
 

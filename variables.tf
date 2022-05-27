@@ -5,12 +5,7 @@ variable "master_nodes" {
 
 variable "worker_nodes" {
   type    = number
-  default = 3
-}
-
-variable "bootstrap_nodes" {
-  type    = number
-  default = 1
+  default = 2
 }
 
 variable "volume_format" {
@@ -23,19 +18,19 @@ variable "centos_image" {
   default = "centos-stream-8"
 }
 
-variable "coreos_image" {
+variable "ubuntu_image" {
   type    = string
-  default = "rhcos-4.9.0-x86_64-qemu.x86_64"
+  default = "focal-server-cloudimg-amd64"
 }
 
 variable "cluster_name" {
   type    = string
-  default = "ocp4"
+  default = "k8s"
 }
 
 variable "base_domain" {
   type    = string
-  default = "ocp.lab"
+  default = "itix.lab"
 }
 
 variable "network_name" {
@@ -45,7 +40,7 @@ variable "network_name" {
 
 variable "network_portgroup" {
   type    = string
-  default = "lab8"
+  default = "lab7"
 }
 
 variable "network_ip_range" {
@@ -58,10 +53,6 @@ variable "network_mac_format" {
   default = "02:01:07:00:07:%02x"
 }
 
-variable "public_cluster_ip" {
-  type = string
-}
-
 variable "master_disk_size" {
   type    = number
   default = 120 * 1024 * 1024 * 1024
@@ -69,12 +60,12 @@ variable "master_disk_size" {
 
 variable "master_vcpu" {
   type    = number
-  default = 4
+  default = 2
 }
 
 variable "master_memory_size" {
   type    = number
-  default = 16 * 1024
+  default = 10 * 1024
 }
 
 variable "lb_disk_size" {
@@ -122,25 +113,6 @@ variable "worker_memory_size" {
   default = 8 * 1024
 }
 
-variable "bootstrap_disk_size" {
-  type    = number
-  default = 120 * 1024 * 1024 * 1024
-}
-
-variable "bootstrap_vcpu" {
-  type    = number
-  default = 4
-}
-
-variable "bootstrap_memory_size" {
-  type    = number
-  default = 16 * 1024
-}
-
-variable "acme_account_email" {
-  type = string
-}
-
 variable "base_image_pool" {
   type    = string
   default = "base-images"
@@ -149,7 +121,6 @@ variable "base_image_pool" {
 locals {
   master_format  = "${var.cluster_name}-master-%02d"
   worker_format  = "${var.cluster_name}-worker-%02d"
-  bootstrap_name = "${var.cluster_name}-bootstrap"
   storage_name   = "${var.cluster_name}-storage"
   lb_name        = "${var.cluster_name}-lb"
   network_domain = "${var.cluster_name}.${var.base_domain}"

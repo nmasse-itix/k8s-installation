@@ -1,5 +1,5 @@
-- name: Start the OpenShift cluster
-  hosts: localhost
+- name: Start the Kubernetes cluster
+  hosts: bastion
   gather_facts: no
   become: no
   vars:

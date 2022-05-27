@@ -1,5 +1,5 @@
-- name: Stop the OpenShift cluster
-  hosts: localhost
+- name: Stop the Kubernetes cluster
+  hosts: bastion
   gather_facts: no
   become: no
   vars:

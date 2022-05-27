@@ -1,17 +1,26 @@
+resource "libvirt_cloudinit_disk" "worker_cloudinit" {
+  name           = "worker-cloudinit.iso"
+  user_data      = data.template_file.worker_user_data.rendered
+  network_config = data.template_file.worker_network_config.rendered
+  pool           = libvirt_pool.cluster_storage.name
+}
+
+data "template_file" "worker_user_data" {
+  template = file("${path.module}/templates/base/cloud-init.cfg")
+}
+
+data "template_file" "worker_network_config" {
+  template = file("${path.module}/templates/base/network-config.cfg")
+}
+
 resource "libvirt_volume" "worker_disk" {
   name             = "${format(local.worker_format, count.index + 1)}.${var.volume_format}"
   count            = var.worker_nodes
   format           = var.volume_format
   pool             = libvirt_pool.cluster_storage.name
-  base_volume_name = "${var.coreos_image}.${var.volume_format}"
+  base_volume_name = "${var.ubuntu_image}.${var.volume_format}"
   base_volume_pool = var.base_image_pool
   size             = var.worker_disk_size
-}
-
-resource "libvirt_ignition" "worker_ignition" {
-  name    = "${var.cluster_name}-worker-ignition"
-  content = file("${path.module}/.clusters/${var.cluster_name}/worker.ign")
-  pool    = libvirt_pool.cluster_storage.name
 }
 
 locals {
@@ -28,10 +37,10 @@ resource "libvirt_domain" "worker" {
   name            = format(local.worker_format, count.index + 1)
   vcpu            = var.worker_vcpu
   memory          = var.worker_memory_size
-  coreos_ignition = libvirt_ignition.worker_ignition.id
+  cloudinit       = libvirt_cloudinit_disk.master_cloudinit.id
   autostart       = false
 
-  cpu = {
+  cpu {
     mode = "host-passthrough"
   }
 

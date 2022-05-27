@@ -15,15 +15,3 @@ resource "local_file" "ansible_inventory" {
   filename        = ".clusters/${var.cluster_name}/inventory"
   file_permission = "0644"
 }
-
-resource "local_file" "cluster_key" {
-  content         = acme_certificate.cluster_cert.private_key_pem
-  filename        = ".clusters/${var.cluster_name}/cluster.key"
-  file_permission = "0600"
-}
-
-resource "local_file" "cluster_cert" {
-  content         = "${acme_certificate.cluster_cert.certificate_pem}${acme_certificate.cluster_cert.issuer_pem}"
-  filename        = ".clusters/${var.cluster_name}/cluster.crt"
-  file_permission = "0644"
-}

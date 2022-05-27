@@ -1,17 +1,26 @@
+resource "libvirt_cloudinit_disk" "master_cloudinit" {
+  name           = "master-cloudinit.iso"
+  user_data      = data.template_file.master_user_data.rendered
+  network_config = data.template_file.master_network_config.rendered
+  pool           = libvirt_pool.cluster_storage.name
+}
+
+data "template_file" "master_user_data" {
+  template = file("${path.module}/templates/base/cloud-init.cfg")
+}
+
+data "template_file" "master_network_config" {
+  template = file("${path.module}/templates/base/network-config.cfg")
+}
+
 resource "libvirt_volume" "master_disk" {
   name             = "${format(local.master_format, count.index + 1)}.${var.volume_format}"
   count            = var.master_nodes
   format           = var.volume_format
   pool             = libvirt_pool.cluster_storage.name
-  base_volume_name = "${var.coreos_image}.${var.volume_format}"
+  base_volume_name = "${var.ubuntu_image}.${var.volume_format}"
   base_volume_pool = var.base_image_pool
   size             = var.master_disk_size
-}
-
-resource "libvirt_ignition" "master_ignition" {
-  name    = "${var.cluster_name}-master-ignition"
-  content = file("${path.module}/.clusters/${var.cluster_name}/master.ign")
-  pool    = libvirt_pool.cluster_storage.name
 }
 
 locals {
@@ -28,10 +37,10 @@ resource "libvirt_domain" "master" {
   name            = format(local.master_format, count.index + 1)
   vcpu            = var.master_vcpu
   memory          = var.master_memory_size
-  coreos_ignition = libvirt_ignition.master_ignition.id
+  cloudinit       = libvirt_cloudinit_disk.master_cloudinit.id
   autostart       = false
 
-  cpu = {
+  cpu {
     mode = "host-passthrough"
   }
 

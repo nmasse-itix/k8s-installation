@@ -8,3 +8,6 @@ install-config.yaml
 .lego
 local.env
 .clusters
+ansible/ansible-venv
+kubespray.yaml
+

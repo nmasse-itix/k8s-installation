@@ -1,13 +1,13 @@
 kind: Namespace
 apiVersion: v1
 metadata:
-  name: "openshift-nfs-provisioner"
+  name: "nfs-provisioner"
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: nfs-client-provisioner
-  namespace: "openshift-nfs-provisioner"
+  namespace: "nfs-provisioner"
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -34,7 +34,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: nfs-client-provisioner
-    namespace: "openshift-nfs-provisioner"
+    namespace: "nfs-provisioner"
 roleRef:
   kind: ClusterRole
   name: nfs-client-provisioner-runner
@@ -44,21 +44,17 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nfs-client-provisioner
-  namespace: "openshift-nfs-provisioner"
+  namespace: "nfs-provisioner"
 rules:
   - apiGroups: [""]
     resources: ["endpoints"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
-  - apiGroups: ["security.openshift.io"]
-    resourceNames: ["hostmount-anyuid"]
-    resources: ["securitycontextconstraints"]
-    verbs: ["use"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nfs-client-provisioner
-  namespace: "openshift-nfs-provisioner"
+  namespace: "nfs-provisioner"
 subjects:
   - kind: ServiceAccount
     name: nfs-client-provisioner
@@ -71,7 +67,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: nfs-client-provisioner
-  namespace: "openshift-nfs-provisioner"
+  namespace: "nfs-provisioner"
 spec:
   replicas: 1
   selector:
@@ -93,7 +89,7 @@ spec:
               mountPath: /persistentvolumes
           env:
             - name: PROVISIONER_NAME
-              value: redhat-emea-ssa-team/hetzner-ocp4
+              value: nfs-subdir-external-provisioner
             - name: NFS_SERVER
               value: "${nfs_server}"
             - name: NFS_PATH
@@ -110,6 +106,6 @@ metadata:
   name: managed-nfs-storage
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: redhat-emea-ssa-team/hetzner-ocp4
+provisioner: nfs-subdir-external-provisioner
 parameters:
   archiveOnDelete: "false"

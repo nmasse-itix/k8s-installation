@@ -1,0 +1,6 @@
+container_manager: crio
+download_container: 'false'
+etcd_kubeadm_enabled: 'true'
+loadbalancer_apiserver_type: nginx
+credentials_dir: "{{ inventory_dir }}"
+kubeconfig_localhost: true

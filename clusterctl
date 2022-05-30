@@ -26,11 +26,14 @@ function init () {
 
   mkdir -p ".clusters/$cluster_name"
   sed "s/__CLUSTER_NAME__/$cluster_name/" terraform.tfvars > ".clusters/$cluster_name/terraform.tfvars"
+  cp kubespray.yaml ".clusters/$cluster_name/kubespray.yaml"
+  ln -sf ../../ansible/kubespray/inventory/sample/group_vars/ ".clusters/$cluster_name/group_vars"
 
   echo "Cluster $cluster_name initialized successfully!"
   echo
   echo "Review and adjust the following files to your needs:"
   echo "- .clusters/$cluster_name/terraform.tfvars"
+  echo "- .clusters/$cluster_name/kubespray.yaml"
   echo
   exit 0
 }
@@ -54,21 +57,20 @@ function start () {
   assert_cluster_name "$@"
   local cluster_name="${1:-}"
 
-  ansible-playbook -i ".clusters/$cluster_name/inventory" ansible/start.yaml
+  ansible-playbook -i ".clusters/$cluster_name/inventory.yaml" ansible/start.yaml
 }
 
 function stop () {
   assert_cluster_name "$@"
   local cluster_name="${1:-}"
 
-  ansible-playbook -i ".clusters/$cluster_name/inventory" ansible/stop.yaml
+  ansible-playbook -i ".clusters/$cluster_name/inventory.yaml" ansible/stop.yaml
 }
 
 function post_install_nfs () {
   local cluster_name="${1:-}"
 
-  kubectl apply --insecure-skip-tls-verify --kubeconfig=".clusters/$cluster_name/auth/kubeconfig" -f ".clusters/$cluster_name/registry-pv.yaml"
-  kubectl apply --insecure-skip-tls-verify --kubeconfig=".clusters/$cluster_name/auth/kubeconfig" -f ".clusters/$cluster_name/nfs-provisioner.yaml"
+  kubectl apply --insecure-skip-tls-verify -f ".clusters/$cluster_name/nfs-provisioner.yaml"
 }
 
 function post_install () {
@@ -79,10 +81,47 @@ function post_install () {
   if [ $# -eq 0 ]; then
     set nfs
   fi
-  
+
+  export KUBECONFIG="$PWD/.clusters/$cluster_name/kube.config"
   for i; do
     post_install_$i "$cluster_name"
   done
+}
+
+function ensure_kubespray_venv_ready () {
+  if [ ! -d "ansible/ansible-venv" ]; then
+    python -m venv ansible/ansible-venv
+    ansible-venv/bin/pip install -r ansible/kubespray/requirements.txt
+    ansible-venv/bin/pip install selinux
+  fi
+}
+
+function kubespray_install () {
+  local cluster_name="${1:-}"
+
+  ensure_kubespray_venv_ready
+  ansible/ansible-venv/bin/ansible-playbook -i ."clusters/$cluster_name/inventory.yaml" ansible/kubespray/cluster.yml -e "@.clusters/$cluster_name/kubespray.yaml"
+  ln -sf artifacts/admin.conf ".clusters/$cluster_name/kube.config"
+}
+
+function kubespray_remove () {
+  local cluster_name="${1:-}"
+
+  ensure_kubespray_venv_ready
+  ansible/ansible-venv/bin/ansible-playbook -i ."clusters/$cluster_name/inventory.yaml" ansible/kubespray/reset.yml -e "@.clusters/$cluster_name/kubespray.yaml"
+  rm -f ".clusters/$cluster_name/kube.config"
+}
+
+function kubespray () {
+  assert_cluster_name "$@"
+  local cluster_name="${1:-}"
+  shift
+
+  if [ $# -eq 0 ]; then
+    set install
+  fi
+
+  kubespray_$1 "$cluster_name"
 }
 
 function install_addon () {
@@ -98,7 +137,7 @@ function shell () {
   local cluster_name="${1:-}"
 
   # Ansible
-  export DEFAULT_HOST_LIST="$PWD/.clusters/$cluster_name"
+  export DEFAULT_HOST_LIST="$PWD/.clusters/$cluster_name/inventory.yaml"
 
   # Terraform
   export TF_CLI_ARGS_plan="-var-file=.clusters/$cluster_name/terraform.tfvars -state=.clusters/$cluster_name/terraform.tfstate"
@@ -108,7 +147,7 @@ function shell () {
   export TF_CLI_ARGS_state_rm="-state=.clusters/$cluster_name/terraform.tfstate"
 
   # Kubernetes
-  export KUBECONFIG="$PWD/.clusters/$cluster_name/auth/kubeconfig"
+  export KUBECONFIG="$PWD/.clusters/$cluster_name/kube.config"
   export KUBECTL_BINARY="$(which kubectl)"
   export CLUSTER_NAME="$cluster_name"
   export PS1="[$CLUSTER_NAME:\w] "
@@ -160,6 +199,14 @@ apply)
   fi
   shift
   apply "$@"
+;;
+kubespray)
+  if [ -z "${2:-}" ]; then
+    echo "Usage: $0 kubespray cluster-name {install|remove}"
+    exit 1
+  fi
+  shift
+  kubespray "$@"
 ;;
 destroy)
   if [ -z "${2:-}" ]; then

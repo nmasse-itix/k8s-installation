@@ -1,0 +1,47 @@
+all:
+  vars:
+    ansible_user: nicolas
+  children:
+    jumphost:
+      hosts:
+        admin.itix.lab:
+          ansible_user: nicolas
+          nodes: ${jsonencode(nodes)}
+    etcd:
+      vars:
+        ansible_become: yes
+        ansible_ssh_common_args: -o StrictHostKeyChecking=no
+      hosts:
+%{for node in nodes}
+%{if node.role == "master"}
+        ${jsonencode(node.name)}:
+          ansible_host: ${jsonencode(node.ip)}
+          etcd_member_name: ${jsonencode(node.name)}
+%{endif}
+%{endfor}
+    k8s_cluster:
+      vars:
+        ansible_become: yes
+        ansible_ssh_common_args: -o StrictHostKeyChecking=no
+        loadbalancer_apiserver:
+          address: ${lb_ip}
+          port: 6443
+      children:
+        calico_rr: {}
+        kube_control_plane:
+          hosts:
+%{for node in nodes}
+%{if node.role == "master"}
+            ${jsonencode(node.name)}: {}
+%{endif}
+%{endfor}
+        kube_node:
+          hosts:
+%{for node in nodes}
+%{if node.role == "worker"}
+            ${jsonencode(node.name)}:
+              ansible_host: ${jsonencode(node.ip)}
+%{endif}
+%{endfor}
+    ungrouped: {}
+
